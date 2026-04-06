@@ -1,0 +1,84 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account information and preferences.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID from Firebase Auth." },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] }
+      },
+      "required": ["uid", "email"]
+    },
+    "SavedBidding": {
+      "title": "Saved Bidding",
+      "description": "A bidding saved by a user for later viewing.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "object": { "type": "string" },
+        "biddingNumber": { "type": "string" },
+        "processNumber": { "type": "string" },
+        "portal": { "type": "string" },
+        "link": { "type": "string" },
+        "date": { "type": "string" },
+        "type": { "type": "string", "enum": ["public", "private"] },
+        "entityType": { "type": "string", "enum": ["municipal", "state", "federal", "private"] },
+        "biddingType": { "type": "string" },
+        "estimatedValue": { "type": "string" },
+        "savedAt": { "type": "number" }
+      },
+      "required": ["userId", "title", "object", "link", "savedAt"]
+    },
+    "SearchAlert": {
+      "title": "Search Alert",
+      "description": "A saved search criteria for notifications.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "filters": { "type": "object" },
+        "createdAt": { "type": "number" },
+        "lastCheckedAt": { "type": "number" }
+      },
+      "required": ["userId", "name", "filters", "createdAt"]
+    },
+    "SearchHistory": {
+      "title": "Search History",
+      "description": "A record of a search performed by a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "query": { "type": "string" },
+        "filters": { "type": "object" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["userId", "query", "filters", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles."
+    },
+    "/saved_biddings/{biddingId}": {
+      "schema": "SavedBidding",
+      "description": "Biddings saved by users."
+    },
+    "/search_alerts/{alertId}": {
+      "schema": "SearchAlert",
+      "description": "Search alerts for users."
+    },
+    "/search_history/{historyId}": {
+      "schema": "SearchHistory",
+      "description": "Search history for users."
+    }
+  }
+}

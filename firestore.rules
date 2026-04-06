@@ -1,0 +1,130 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: userId
+// Fields:
+//   - uid: string (required) - User ID
+//   - email: string (required) - User email
+//   - displayName: string (optional) - User display name
+//   - photoURL: string (optional) - User photo URL
+//   - role: string (optional) - User role (user/admin)
+//
+// Collection: saved_biddings
+// Document ID: biddingId
+// Fields:
+//   - userId: string (required) - Owner's UID
+//   - title: string (required) - Bidding title
+//   - object: string (required) - Bidding object
+//   - biddingNumber: string (optional) - Bidding number
+//   - processNumber: string (optional) - Process number
+//   - portal: string (optional) - Portal name
+//   - link: string (required) - Direct link
+//   - date: string (optional) - Publication date
+//   - type: string (required) - public/private
+//   - entityType: string (optional) - municipal/state/federal/private
+//   - biddingType: string (optional) - Pregão, etc.
+//   - estimatedValue: string (optional) - Estimated value
+//   - savedAt: number (required) - Timestamp
+//
+// Collection: search_alerts
+// Document ID: alertId
+// Fields:
+//   - userId: string (required) - Owner's UID
+//   - name: string (required) - Alert name
+//   - filters: map (required) - Search filters
+//   - createdAt: number (required) - Timestamp
+//   - lastCheckedAt: number (optional) - Last check timestamp
+//
+// Collection: search_history
+// Document ID: historyId
+// Fields:
+//   - userId: string (required) - Owner's UID
+//   - query: string (required) - Search query
+//   - filters: map (required) - Search filters
+//   - timestamp: number (required) - Timestamp
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email);
+    }
+
+    function isValidSavedBidding(data) {
+      return data.keys().hasAll(['userId', 'title', 'object', 'link', 'savedAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() < 500 &&
+             data.object is string && data.object.size() < 5000 &&
+             data.link is string && data.link.size() < 2000;
+    }
+
+    function isValidSearchAlert(data) {
+      return data.keys().hasAll(['userId', 'name', 'filters', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() < 100 &&
+             data.filters is map;
+    }
+
+    function isValidSearchHistory(data) {
+      return data.keys().hasAll(['userId', 'query', 'filters', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.query is string && data.query.size() < 500 &&
+             data.filters is map;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /saved_biddings/{biddingId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidSavedBidding(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /search_alerts/{alertId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidSearchAlert(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidSearchAlert(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /search_history/{historyId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidSearchHistory(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
